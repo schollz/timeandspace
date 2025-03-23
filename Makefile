@@ -13,6 +13,7 @@ desk: stop desktop/.venv
 	cd orchestrator/ && go build -v 
 	cp ecosystem.desktop.js ecosystem.config.js
 	pm2 start ecosystem.config.js
+	pm2 log
 
 pi:
 	cp ecosystem.raspberrypi.js ecosystem.config.js

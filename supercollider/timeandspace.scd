@@ -16,13 +16,12 @@ s.waitForBoot({
 	}.play;
 	Routine{
 		SynthDef("final",{
-			arg busTime, busSpace, busPlace, spacePlaceMix=0.5, spaceTimeMix = 0.5, verb=0, volume = 1.0;
+			arg busTime, busSpace, busPlace, placeMix=0.5, spaceTimeMix = 0.5, verb=0, volume = 1.0;
 			var snd, freq, dur;
 			var sndTime = In.ar(busTime,2)*0.1;
 			var sndSpace = In.ar(busSpace,2);
 			var sndPlace = In.ar(busPlace,2);
 			var sndGrains;
-			sndSpace = SelectX.ar(Lag.kr(spacePlaceMix),[sndSpace,sndPlace]);
 			snd = SelectX.ar(Lag.kr(spaceTimeMix),[sndSpace,sndTime]);
 			freq = LFNoise2.kr(1/3).range(0.5,10);
 			dur = LFNoise2.kr(1/3).range(0.5,4);
@@ -51,6 +50,7 @@ s.waitForBoot({
 			)];
 			snd = SelectX.ar(LFNoise2.kr(1/10).range(0,1.0),[snd,sndGrains]);
 
+			snd = snd + (sndPlace * Lag.kr(placeMix));
 			snd = snd * EnvGen.ar(Env.adsr(3,1,1,1));
 			snd = HPF.ar(snd,100);
 			snd = LPF.ar(snd,12000);
@@ -66,7 +66,7 @@ s.waitForBoot({
 					trigger: Impulse.ar(0),
 					startPos: BufFrames.ir(buf) * pos,
 					loop: 1);
-				snd = EnvGen.ar(Env.adsr(3, 1, 1, 3), gate: 1-done, doneAction: 2).poll* snd;
+				snd = EnvGen.ar(Env.adsr(10, 1, 1, 10), gate: 1-done, doneAction: 2).poll* snd;
 				Out.ar(busOut, snd);
 			}).send(s);
 		});
