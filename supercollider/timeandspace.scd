@@ -2,6 +2,7 @@
 s.waitForBoot({
 	var buses = Dictionary.new();
 	~synths = Dictionary.new();
+	~buffers = Dictionary.new();
 
 	~scale=(Scale.major.degrees-12)++(Scale.major.degrees)++(Scale.major.degrees+12);
 	~velocity=Bus.control(s,1);
@@ -15,7 +16,7 @@ s.waitForBoot({
 	}.play;
 	Routine{
 		SynthDef("final",{
-			arg busTime, busSpace, busPlace, spacePlaceMix=0.0, spaceTimeMix = 0.5, verb=0, volume = 1.0;
+			arg busTime, busSpace, busPlace, spacePlaceMix=0.5, spaceTimeMix = 0.5, verb=0, volume = 1.0;
 			var snd, freq, dur;
 			var sndTime = In.ar(busTime,2)*0.1;
 			var sndSpace = In.ar(busSpace,2);
@@ -28,7 +29,7 @@ s.waitForBoot({
 
 			//snd = AnalogTape.ar(snd,0.9,0.9,0.8);
 			snd = SelectX.ar(LFNoise2.kr(1/5).range(0,0.5),[snd,AnalogDegrade.ar(snd)]);
-			snd = SelectX.ar(LFNoise2.kr(1/5).range(0.05,0.1)+verb,[snd,
+			snd = SelectX.ar(LFNoise2.kr(1/5).range(0.05,0.1)+Clip.kr(verb,0,0.9),[snd,
 				Fverb.ar(snd[0],snd[1],1,
 					tail_density: LFNoise2.kr(1/3).range(50,90),
 					decay: LFNoise2.kr(1/3).range(50,90),
@@ -57,15 +58,18 @@ s.waitForBoot({
 		}).send(s);
 
 
-		["looper1", "looper2"].do { |name, i|
+		["looper1", "looper2"].do({ |name, i|
 			SynthDef(name, {
-				arg buf, busOut, done = 0;
+				arg buf, busOut, pos=0, done = 0;
 				var snd;
-				snd = PlayBuf.ar(i + 1, buf, BufRateScale.kr(buf), loop: 1);
-				snd = EnvGen.ar(Env.adsr(3, 1, 1, 3), gate: done, doneAction: 2) * snd;
+				snd = PlayBuf.ar(i + 1, buf, BufRateScale.kr(buf), 
+					trigger: Impulse.ar(0),
+					startPos: BufFrames.ir(buf) * pos,
+					loop: 1);
+				snd = EnvGen.ar(Env.adsr(3, 1, 1, 3), gate: 1-done, doneAction: 2).poll* snd;
 				Out.ar(busOut, snd);
 			}).send(s);
-		};
+		});
 
 		SynthDef("bass", { arg freq = 440, amp = 0.5, gate = 0, busOut, volume = 0.0;
 			var snd, env, oscfreq, output;
@@ -91,8 +95,8 @@ s.waitForBoot({
 		buses.put("busTime",Bus.audio(s,2));
 		buses.put("busPlace",Bus.audio(s,2));
 
-		~isTime=InstrumentSample2.new(Server.default,buses.at("busTime"));
-		~isSpace=InstrumentSample2.new(Server.default,buses.at("busSpace"));
+		~isTime=InstrumentSample2.new(s,buses.at("busTime"));
+		~isSpace=InstrumentSample2.new(s,buses.at("busSpace"));
 
 		// add final bus to the end
 		~synths.put("final",Synth.tail(s,"final",[\busTime,buses.at("busTime"),\busSpace,buses.at("busSpace"),\busPlace,buses.at("busPlace")]));
@@ -205,6 +209,28 @@ s.waitForBoot({
 			if (msg[1].asString=="bass",{
 				// expects db
 				~synths.at("bass").set(\volume,msg[2].asFloat);
+			});
+			if (msg[1].asString=="buffer_play",{
+				var filename = msg[2].asString;
+				var position = msg[3].asFloat;
+				[filename,position].postln;
+				// stop any buffer currently
+				if (~synths.at("buffer").notNil,{
+					~synths.at("buffer").set(\done,1);
+				});
+				~buffers.put("buffer",Buffer.read(s,filename,action:{ arg buf;
+					["buffer",buf,"looper"++buf.numChannels].postln;
+					~synths.put("buffer",Synth.head(s,"looper"++buf.numChannels,[
+						\buf,buf.bufnum,
+						\busOut,buses.at("busPlace"),
+						\pos, position
+					]));
+				}));
+			});
+			if (msg[1].asString=="buffer_stop",{
+				if (~synths.at("buffer").notNil,{
+					~synths.at("buffer").set(\done,1);
+				});
 			});
 		},'/data');
 		~synths.at("final").set(\verb,0.2);

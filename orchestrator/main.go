@@ -148,6 +148,17 @@ func NewSharedData(logger *slog.Logger) *SharedData {
 						msg.Append(string("volume"))
 						oscDisplay.Send(msg)
 					} else if i == 3 {
+						// reverb
+						msg := osc.NewMessage("/data")
+						msg.Append("verb")
+						msg.Append(newData.knobArray[i])
+						oscSupercollider.Send(msg)
+						msg = osc.NewMessage("/display")
+						msg.Append(int32(0))
+						msg.Append(string("msg"))
+						msg.Append(string("reverb"))
+						oscDisplay.Send(msg)
+					} else if i == 0 {
 						// space/time mix
 						msg := osc.NewMessage("/data")
 						msg.Append("spacetime")
@@ -161,7 +172,7 @@ func NewSharedData(logger *slog.Logger) *SharedData {
 							msg.Append(string("space"))
 						} else {
 							// time
-							msg.Append(string("itimme"))
+							msg.Append(string("time"))
 						}
 						oscDisplay.Send(msg)
 					}

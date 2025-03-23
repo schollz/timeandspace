@@ -19,7 +19,7 @@ pi:
 	pm2 start ecosystem.config.js
 
 stop:
-	pm2 stop all && pm2 delete all
+	-pm2 stop all && pm2 delete all
 
 clean:
 	rm -rf *log
