@@ -32,6 +32,7 @@ func sendOSCMessage() {
 }
 
 func playMusicBox(note float32, velocity float32) {
+	fmt.Printf("Playing note %f with velocity %f\n", note, velocity)
 	mu.Lock()
 	defer mu.Unlock()
 	msg := osc.NewMessage("/data")
@@ -321,13 +322,17 @@ func (m *Metronome) Start() {
 						}
 					}
 				}
-				for i := 0; i < 5; i++ {
-					if m.state.knobArray[i] != newData.knobArray[i] {
-						switch i {
-						case 0:
-							m.probabilityDisappearance = newData.knobArray[i]
+				if m.state.knobArray[0] > 0.5 {
+					// TIME MODE
+					for i := 0; i < 5; i++ {
+						if m.state.knobArray[i] != newData.knobArray[i] {
+							switch i {
+							case 1:
+								m.probabilityDisappearance = newData.knobArray[i]
+							}
 						}
 					}
+
 				}
 				m.state = newData
 			}

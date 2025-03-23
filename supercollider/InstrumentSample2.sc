@@ -221,6 +221,7 @@ InstrumentSample2 {
 		if (syns.at(id).notNil,{
 			if (syns.at(id).at(note).notNil,{
 				if (syns.at(id).at(note).isRunning,{
+					["noteOff",id,note].postln;
 					syns.at(id).at(note).set(\gate,0);
 				});
 			});

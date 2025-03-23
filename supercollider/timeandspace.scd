@@ -23,6 +23,7 @@ s.waitForBoot({
 			var sndPlace = In.ar(busPlace,2);
 			var sndGrains;
 			snd = SelectX.ar(Lag.kr(spaceTimeMix),[sndSpace,sndTime]);
+			sndPlace = SelectX.ar(Lag.kr(spaceTimeMix),[sndPlace,sndTime]);
 			freq = LFNoise2.kr(1/3).range(0.5,10);
 			dur = LFNoise2.kr(1/3).range(0.5,4);
 
@@ -62,12 +63,13 @@ s.waitForBoot({
 			SynthDef(name, {
 				arg buf, busOut, pos=0, done = 0;
 				var snd;
+				var env;
 				snd = PlayBuf.ar(i + 1, buf, BufRateScale.kr(buf), 
 					trigger: Impulse.ar(0),
 					startPos: BufFrames.ir(buf) * pos,
 					loop: 1);
-				snd = EnvGen.ar(Env.adsr(10, 1, 1, 10), gate: 1-done, doneAction: 2).poll* snd;
-				Out.ar(busOut, snd);
+				env = (((EnvGen.ar(Env.adsr(10, 1, 1, 10,curve:\sine), gate: 1-done, doneAction: 2)-1)*96)-16);
+				Out.ar(busOut, snd * env.dbamp);
 			}).send(s);
 		});
 
@@ -94,12 +96,14 @@ s.waitForBoot({
 		buses.put("busSpace",Bus.audio(s,2));
 		buses.put("busTime",Bus.audio(s,2));
 		buses.put("busPlace",Bus.audio(s,2));
-
+		s.sync;
 		~isTime=InstrumentSample2.new(s,buses.at("busTime"));
 		~isSpace=InstrumentSample2.new(s,buses.at("busSpace"));
+		s.sync;
 
 		// add final bus to the end
 		~synths.put("final",Synth.tail(s,"final",[\busTime,buses.at("busTime"),\busSpace,buses.at("busSpace"),\busPlace,buses.at("busPlace")]));
+		s.sync;
 
 
 
@@ -122,7 +126,7 @@ s.waitForBoot({
 		~playStrings=1;
 		Routine {
 			s.sync;
-			~synths.put("bass",Synth.head(~synths.at("final"),"bass",[
+			~synths.put("bass",Synth.head(s,"bass",[
 				\busOut, buses.at("busSpace"),
 			]));
 			inf.do{
